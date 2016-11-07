@@ -6,7 +6,55 @@ using System.IO;
 
 namespace AC3_ULZ_decomp
 {
-    class ULZ
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string[] ulz_files = Directory.GetFiles(args[0], "*.ulz", SearchOption.AllDirectories);
+            string orig_dir = args[1];
+
+            foreach (string ulz_filename in ulz_files)
+            {
+                BinaryReader ulz = new BinaryReader(File.OpenRead(ulz_filename));
+
+                MemoryStream ulz_unc = ULZ.Uncompress(ulz);
+
+                if (ulz_unc != null)
+                {
+
+                    ulz_unc.Seek(0, SeekOrigin.Begin);
+                    byte[] tim_type = new byte[4];
+                    ulz_unc.Read(tim_type, 0, 4);
+                    int is_tim = BitConverter.ToInt32(tim_type, 0);
+
+
+                    string add_dir = "/ulz_BIN";
+                    string out_ext = ".bin";
+
+                    if (is_tim == 0x10)
+                    {
+                        add_dir = "/ulz_TIMS";
+                        out_ext = ".tim";
+                    }
+
+                    FileInfo fi = new FileInfo(ulz_filename);
+                    DirectoryInfo dir = fi.Directory;
+                    string out_dir = dir.FullName.Replace(orig_dir + "/", "_");
+                    string full_dir = out_dir + add_dir;
+                    string full_filename = fi.Name.Replace(fi.Extension, "") + out_ext;
+
+                    if (!Directory.Exists(out_dir + add_dir))
+                        Directory.CreateDirectory(out_dir + add_dir);
+
+                    BinaryWriter file = new BinaryWriter(File.OpenWrite(full_dir + "/" + full_filename));
+                    file.Write(ulz_unc.ToArray());
+                    file.Close();
+                    ulz_unc.Close();
+                }
+            }
+        }
+    }
+     class ULZ
     {
         static public MemoryStream Uncompress(BinaryReader ulz)
         {
@@ -23,7 +71,7 @@ namespace AC3_ULZ_decomp
                 case 0x02:
                     return Uncompess_v2(ulz, u_size, u_pos);
                 default:
-                    throw new Exception("Uknown ULZ compression!");
+                    throw new Exception("Unknow ULZ compression!");
             }
         }
 
